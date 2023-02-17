@@ -458,14 +458,14 @@ FancyZones::OnKeyDown(PKBDLLHOOKSTRUCT info) noexcept
     bool const win = GetAsyncKeyState(VK_LWIN) & 0x8000 || GetAsyncKeyState(VK_RWIN) & 0x8000;
     bool const alt = GetAsyncKeyState(VK_MENU) & 0x8000;
     bool const ctrl = GetAsyncKeyState(VK_CONTROL) & 0x8000;
-    if ((win && !shift && !ctrl) || (win && ctrl && alt))
+    if ((win && !shift && !ctrl))
     {
-        if ((info->vkCode == VK_RIGHT) || (info->vkCode == VK_LEFT) || (info->vkCode == VK_UP) || (info->vkCode == VK_DOWN))
+        if ((info->vkCode == VK_RIGHT) || (info->vkCode == VK_LEFT) || (info->vkCode == VK_UP) || (info->vkCode == VK_DOWN) || ((info->vkCode >= '0') && (info->vkCode <= '9')))
         {
             if (ShouldProcessSnapHotkey(info->vkCode))
             {
                 Trace::FancyZones::OnKeyDown(info->vkCode, win, ctrl, false /*inMoveSize*/);
-                // Win+Left, Win+Right will cycle through Zones in the active ZoneSet when WM_PRIV_SNAP_HOTKEY's handled
+                // Win+Left, Win+Right will cycle through Zones in the active ZoneSet when WM_PRIV_SNAP_HOTKEY's handled0
                 PostMessageW(m_window, WM_PRIV_SNAP_HOTKEY, 0, info->vkCode);
                 return true;
             }
@@ -800,6 +800,34 @@ bool FancyZones::OnSnapHotkeyBasedOnZoneNumber(HWND window, DWORD vkCode) noexce
     {
         // Multi monitor environment.
         auto currMonitorInfo = std::find(std::begin(monitorInfo), std::end(monitorInfo), current);
+        if (vkCode >= '0' && vkCode <= '9')
+        {
+            // Input is the zone number to move to (considering zones across screens)
+            ZoneIndex input = static_cast<ZoneIndex>(vkCode - '0');
+            auto initialWorkArea = m_workAreaHandler.GetWorkArea(*currMonitorInfo);
+            int64_t offset = 0;
+            for (HMONITOR monitor : monitorInfo) {
+                WorkArea* workArea = m_workAreaHandler.GetWorkArea(monitor);
+                int64_t workAreaSize = static_cast<int64_t>(workArea->GetLayout()->Zones().size());
+                if (input >= offset && input < offset + workAreaSize)
+                {
+                    // Found the area that has desired Zone. Need to use relative index of desired zone (relative to this workArea)
+                    workArea->MoveWindowIntoZoneByIndex(window, input - offset);
+                    // unassign from previous work area
+                    if (initialWorkArea != workArea)
+                    {
+                        initialWorkArea->UnsnapWindow(window);
+                    }
+
+                    Trace::FancyZones::KeyboardSnapWindowToZone(workArea->GetLayout().get(), workArea->GetLayoutWindows().get());
+                    return true;
+                }
+
+                offset += workAreaSize;
+            }
+            return false;
+        }
+
         do
         {
             auto workArea = m_workAreaHandler.GetWorkArea(*currMonitorInfo);
@@ -1016,7 +1044,7 @@ bool FancyZones::OnSnapHotkey(DWORD vkCode) noexcept
         return OnSnapHotkeyBasedOnPosition(window, vkCode);
     }
 
-    return (vkCode == VK_LEFT || vkCode == VK_RIGHT) && OnSnapHotkeyBasedOnZoneNumber(window, vkCode);
+    return (vkCode == VK_LEFT || vkCode == VK_RIGHT || (vkCode >= '0' && vkCode <= '9')) && OnSnapHotkeyBasedOnZoneNumber(window, vkCode);
 }
 
 bool FancyZones::ProcessDirectedSnapHotkey(HWND window, DWORD vkCode, bool cycle, WorkArea* const workArea) noexcept
