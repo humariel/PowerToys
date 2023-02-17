@@ -806,7 +806,8 @@ bool FancyZones::OnSnapHotkeyBasedOnZoneNumber(HWND window, DWORD vkCode) noexce
             ZoneIndex input = static_cast<ZoneIndex>(vkCode - '0');
             auto initialWorkArea = m_workAreaHandler.GetWorkArea(*currMonitorInfo);
             int64_t offset = 0;
-            for (HMONITOR monitor : monitorInfo) {
+            for (HMONITOR monitor : monitorInfo)
+            {
                 WorkArea* workArea = m_workAreaHandler.GetWorkArea(monitor);
                 int64_t workAreaSize = static_cast<int64_t>(workArea->GetLayout()->Zones().size());
                 if (input >= offset && input < offset + workAreaSize)
