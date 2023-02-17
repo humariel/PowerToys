@@ -458,14 +458,14 @@ FancyZones::OnKeyDown(PKBDLLHOOKSTRUCT info) noexcept
     bool const win = GetAsyncKeyState(VK_LWIN) & 0x8000 || GetAsyncKeyState(VK_RWIN) & 0x8000;
     bool const alt = GetAsyncKeyState(VK_MENU) & 0x8000;
     bool const ctrl = GetAsyncKeyState(VK_CONTROL) & 0x8000;
-    if ((win && !shift && !ctrl))
+    if ((win && !shift && !ctrl) || (win && ctrl && alt))
     {
         if ((info->vkCode == VK_RIGHT) || (info->vkCode == VK_LEFT) || (info->vkCode == VK_UP) || (info->vkCode == VK_DOWN) || ((info->vkCode >= '0') && (info->vkCode <= '9')))
         {
             if (ShouldProcessSnapHotkey(info->vkCode))
             {
                 Trace::FancyZones::OnKeyDown(info->vkCode, win, ctrl, false /*inMoveSize*/);
-                // Win+Left, Win+Right will cycle through Zones in the active ZoneSet when WM_PRIV_SNAP_HOTKEY's handled0
+                // Win+Left, Win+Right will cycle through Zones in the active ZoneSet when WM_PRIV_SNAP_HOTKEY's handled
                 PostMessageW(m_window, WM_PRIV_SNAP_HOTKEY, 0, info->vkCode);
                 return true;
             }
